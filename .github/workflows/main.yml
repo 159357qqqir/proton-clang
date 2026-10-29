@@ -1,4 +1,4 @@
-name: Build Proton Clang aarch64
+name: Get Proton Clang aarch64
 on:
   workflow_dispatch:
 
@@ -6,37 +6,16 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Install dependencies
+      - name: Clone prebuilt Proton Clang
         run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build gcc g++ python3 git curl xz-utils
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git proton-clang
 
-      - name: Clone Proton Clang source
+      - name: Package
         run: |
-          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git proton-clang-src
-
-      - name: Build LLVM/Clang
-        run: |
-          cd proton-clang-src
-          mkdir build
-          cd build
-          cmake -G Ninja ../llvm \
-            -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt;libcxx;libcxxabi" \
-            -DCMAKE_INSTALL_PREFIX=$PWD/install \
-            -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
-            -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-gnu \
-            -DLLVM_ENABLE_LTO=OFF \
-            -DCMAKE_BUILD_TYPE=Release
-          ninja -j2
-          ninja install
-
-      - name: Package toolchain
-        run: |
-          cd proton-clang-src/build/install
-          tar -Jcf ../../proton-clang-aarch64.tar.xz *
+          tar -Jcf proton-clang-aarch64.tar.xz proton-clang
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: proton-clang-aarch64
-          path: proton-clang-src/proton-clang-aarch64.tar.xz
+          path: proton-clang-aarch64.tar.xz
