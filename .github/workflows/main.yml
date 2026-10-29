@@ -1,6 +1,6 @@
 name: Build Proton Clang aarch64
 on:
-  workflow_dispatch: # 手动触发，自己点按钮编译
+  workflow_dispatch:
 
 jobs:
   build:
@@ -9,38 +9,34 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build gcc g++ git python3 libstdc++-12-dev crossbuild-essential-arm64
+          sudo apt install -y cmake ninja-build gcc g++ python3 git curl xz-utils
 
-      - name: Checkout source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Build LLVM/Clang for aarch64-linux-gnu
+      - name: Clone Proton Clang source
         run: |
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git proton-clang-src
+
+      - name: Build LLVM/Clang
+        run: |
+          cd proton-clang-src
           mkdir build
           cd build
           cmake -G Ninja ../llvm \
             -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt;libcxx;libcxxabi" \
-            -DCMAKE_CROSSCOMPILING=ON \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
             -DCMAKE_INSTALL_PREFIX=$PWD/install \
             -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" \
             -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-gnu \
-            -DLLVM_ENABLE_LTO=OFF
-          ninja
+            -DLLVM_ENABLE_LTO=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          ninja -j2
           ninja install
 
       - name: Package toolchain
         run: |
-          cd build/install
-          tar -Jcf ../proton-clang-aarch64.tar.xz *
+          cd proton-clang-src/build/install
+          tar -Jcf ../../proton-clang-aarch64.tar.xz *
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: proton-clang-aarch64
-          path: build/proton-clang-aarch64.tar.xz
+          path: proton-clang-src/proton-clang-aarch64.tar.xz
